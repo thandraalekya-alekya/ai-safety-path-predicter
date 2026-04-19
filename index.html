@@ -11,16 +11,18 @@ body {
 }
 
 .container {
-  max-width:500px;
-  margin:50px auto;
+  max-width:600px;
+  margin:20px auto;
   background:white;
   padding:20px;
   border-radius:10px;
   box-shadow:0 4px 10px rgba(0,0,0,0.1);
 }
 
-h2 {
-  text-align:center;
+h2 { text-align:center; }
+
+.section {
+  margin-top:20px;
 }
 
 input, button {
@@ -45,11 +47,14 @@ button {
   text-align:center;
   font-size:18px;
 }
-.safe {
-  color:green;
-}
-.risky {
-  color:red;
+
+.safe { color:green; }
+.risky { color:red; }
+
+.box {
+  background:#eef;
+  padding:10px;
+  border-radius:6px;
 }
 </style>
 </head>
@@ -57,40 +62,70 @@ button {
 <body>
 
 <div class="container">
+
   <h2>AI Safety Path Predictor</h2>
 
+  <!-- INPUT -->
   <input id="start" placeholder="Enter Start Location">
   <input id="end" placeholder="Enter Destination">
 
   <button onclick="predict()">Check Safety</button>
 
   <div id="result">Enter locations and click button</div>
+
+  <!-- CORE IDEA -->
+  <div class="section">
+    <h3>🧠 Core Idea</h3>
+    <p>Use AI + real-time factors to suggest safe routes:</p>
+    <ul>
+      <li>📍 Crime data</li>
+      <li>🚗 Traffic conditions</li>
+      <li>🌙 Night safety (lighting)</li>
+      <li>👥 Crowd density</li>
+      <li>🚑 Emergency services nearby</li>
+    </ul>
+  </div>
+
+  <!-- AI LOGIC -->
+  <div class="section">
+    <h3>✍️ AI Logic (Simplified)</h3>
+    <div class="box">
+      Safety Score = 100 − (Crime + Traffic + Darkness + Risk Factors)
+    </div>
+  </div>
+
 </div>
 
 <script>
 function predict(){
-  const start = document.getElementById("start").value;
-  const end = document.getElementById("end").value;
+  const start = document.getElementById("start").value.toLowerCase();
+  const end = document.getElementById("end").value.toLowerCase();
 
   if(start === "" || end === ""){
     alert("Please enter both locations");
     return;
   }
 
-  // simple AI logic (demo)
-  let score = Math.floor(Math.random() * 100);
+  // Semi-real logic (NOT random)
+  let base = start.length * 3 + end.length * 5;
 
-  let resultText = "";
-  if(score > 70){
-    resultText = "Safe Route ✅";
-    document.getElementById("result").className = "safe";
-  } else {
-    resultText = "Risky Route ⚠️";
-    document.getElementById("result").className = "risky";
-  }
+  // simulate risk factors
+  let crime = start.includes("old") ? 20 : 10;
+  let traffic = end.includes("city") ? 20 : 10;
+  let night = 10;
+  let crowd = 10;
+
+  let risk = crime + traffic + night + crowd;
+
+  let score = Math.max(0, 100 - risk - (base % 20));
+
+  let msg = score > 70 ? "Safe Route ✅" : "Risky Route ⚠️";
 
   document.getElementById("result").innerHTML =
-    "Safety Score: " + score + "%<br>" + resultText;
+    "Safety Score: " + score + "%<br>" + msg;
+
+  document.getElementById("result").className =
+    score > 70 ? "safe" : "risky";
 }
 </script>
 
