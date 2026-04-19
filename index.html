@@ -1,162 +1,121 @@
 <!DOCTYPE html>
-<html lang="en">
+
+<html>
 <head>
-<meta charset="UTF-8">
-<title>AI Safe Route Finder</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Safety Path Predictor</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    body { margin:0; font-family: Arial; }
+    #map { height: 90vh; }
 
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f4f6f8;
-    margin: 0;
-    padding: 20px;
-  }
+    .controls {
+      padding:10px;
+      background:#f4f4f4;
+      display:flex;
+      gap:10px;
+      flex-wrap: wrap;
+    }
 
-  .container {
-    max-width: 600px;
-    margin: auto;
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  }
+    input, button {
+      padding:8px;
+      font-size:14px;
+    }
 
-  h2 {
-    text-align: center;
-  }
+    button {
+      background:#007BFF;
+      color:white;
+      border:none;
+      cursor:pointer;
+    }
 
-  input, button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-  }
-
-  button {
-    background: #007BFF;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-  }
-
-  button:hover {
-    background: #0056b3;
-  }
-
-  .route {
-    margin-top: 15px;
-    padding: 10px;
-    border-radius: 6px;
-    background: #eef;
-  }
-
-  .safe {
-    background: #d4edda;
-  }
-
-  .risk {
-    background: #f8d7da;
-  }
-</style>
+    #score {
+      font-weight:bold;
+      color:green;
+    }
+  </style>
 </head>
-
-<body>
-
-<div class="container">
-  <h2>🚦 AI Safe Route Finder</h2>
-
-  <input type="text" id="start" placeholder="Enter Start Location">
-  <input type="text" id="end" placeholder="Enter Destination">
-
-  <button onclick="findRoutes()">Find Safest Route</button>
-
-  <div id="results"></div>
+  <body>
+<div class="controls">
+  <input type="text" id="start" placeholder="Start (lat,lng)">
+  <input type="text" id="end" placeholder="End (lat,lng)">
+  <button onclick="findRoute()">Find Safe Route</button>
+  <span id="score"></span>
 </div>
-
+<div id="map"></div>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-function simulateRoutes(start, end) {
-  return [
-    {
-      id: 1,
-      path: "Main Road דרך City Center",
-      lighting: "good",
-      crime: "low",
-      traffic: "medium"
-    },
-    {
-      id: 2,
-      path: "Shortcut דרך Alley Streets",
-      lighting: "poor",
-      crime: "high",
-      traffic: "low"
-    }
+  // Initialize map (Hyderabad default)
+  var map = L.map('map').setView([17.3850, 78.4867], 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  var routeLine;
+
+  // Dummy danger zones
+  const dangerZones = [
+    { lat:17.385, lng:78.486, risk:8 },
+    { lat:17.395, lng:78.480, risk:6 },
+    { lat:17.400, lng:78.490, risk:7 }
   ];
-}
 
-function calculateSafety(route) {
-  let score = 100;
+  // Show danger zones
+  dangerZones.forEach(zone => {
+    L.circle([zone.lat, zone.lng], {
+      color:'red',
+      radius:200
+    }).addTo(map);
+  });
 
-  if (route.lighting === "poor") score -= 30;
-  if (route.crime === "high") score -= 40;
-  if (route.traffic === "low") score -= 10;
+  // Safety calculation
+  function calculateSafety(routeCoords) {
+    let risk = 0;
 
-  return score;
-}
+    routeCoords.forEach(point => {
+      dangerZones.forEach(zone => {
+        let dist = map.distance(point, [zone.lat, zone.lng]);
+        if (dist < 300) {
+          risk += zone.risk;
+        }
+      });
+    });
 
-function findRoutes() {
-  const start = document.getElementById("start").value;
-  const end = document.getElementById("end").value;
-
-  if (!start || !end) {
-    alert("Please enter both locations.");
-    return;
+    return Math.max(0, 100 - risk);
   }
 
-  const routes = simulateRoutes(start, end);
+  // Find route
+  async function findRoute() {
+    const startInput = document.getElementById("start").value.split(",");
+    const endInput = document.getElementById("end").value.split(",");
 
-  let bestRoute = null;
-  let highestScore = -1;
+    const start = [parseFloat(startInput[0]), parseFloat(startInput[1])];
+    const end = [parseFloat(endInput[0]), parseFloat(endInput[1])];
 
-  routes.forEach(route => {
-    route.score = calculateSafety(route);
+    if(routeLine) map.removeLayer(routeLine);
 
-    if (route.score > highestScore) {
-      highestScore = route.score;
-      bestRoute = route;
-    }
-  });
+    const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
 
-  displayResults(routes, bestRoute);
-}
+    const res = await fetch(url);
+    const data = await res.json();
 
-function displayResults(routes, bestRoute) {
-  const container = document.getElementById("results");
-  container.innerHTML = "<h3>Route Analysis</h3>";
+    const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
 
-  routes.forEach(route => {
-    const div = document.createElement("div");
+    // Draw route
+    routeLine = L.polyline(coords, {color:'blue'}).addTo(map);
+    map.fitBounds(routeLine.getBounds());
 
-    div.className = "route " + (route.id === bestRoute.id ? "safe" : "risk");
+    // Calculate safety score
+    let score = calculateSafety(coords);
 
-    div.innerHTML = `
-      <strong>Route ${route.id}</strong><br>
-      Path: ${route.path}<br>
-      Safety Score: ${route.score}/100<br>
-      Lighting: ${route.lighting}<br>
-      Crime Risk: ${route.crime}<br>
-      Traffic: ${route.traffic}
-    `;
-
-    container.appendChild(div);
-  });
-
-  const best = document.createElement("div");
-  best.innerHTML = `<h3>✅ Recommended Route: ${bestRoute.id}</h3>`;
-  container.appendChild(best);
-}
+    document.getElementById("score").innerText = "Safety Score: " + score + "%";
+  }
 </script>
-
 </body>
 </html>
+:::
+
