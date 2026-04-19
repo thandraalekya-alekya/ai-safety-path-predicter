@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Safe Route Finder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 20px;
+  }
+
+  .container {
+    max-width: 600px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+
+  h2 {
+    text-align: center;
+  }
+
+  input, button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+
+  button {
+    background: #007BFF;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #0056b3;
+  }
+
+  .route {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 6px;
+    background: #eef;
+  }
+
+  .safe {
+    background: #d4edda;
+  }
+
+  .risk {
+    background: #f8d7da;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>🚦 AI Safe Route Finder</h2>
+
+  <input type="text" id="start" placeholder="Enter Start Location">
+  <input type="text" id="end" placeholder="Enter Destination">
+
+  <button onclick="findRoutes()">Find Safest Route</button>
+
+  <div id="results"></div>
+</div>
+
+<script>
+function simulateRoutes(start, end) {
+  return [
+    {
+      id: 1,
+      path: "Main Road דרך City Center",
+      lighting: "good",
+      crime: "low",
+      traffic: "medium"
+    },
+    {
+      id: 2,
+      path: "Shortcut דרך Alley Streets",
+      lighting: "poor",
+      crime: "high",
+      traffic: "low"
+    }
+  ];
+}
+
+function calculateSafety(route) {
+  let score = 100;
+
+  if (route.lighting === "poor") score -= 30;
+  if (route.crime === "high") score -= 40;
+  if (route.traffic === "low") score -= 10;
+
+  return score;
+}
+
+function findRoutes() {
+  const start = document.getElementById("start").value;
+  const end = document.getElementById("end").value;
+
+  if (!start || !end) {
+    alert("Please enter both locations.");
+    return;
+  }
+
+  const routes = simulateRoutes(start, end);
+
+  let bestRoute = null;
+  let highestScore = -1;
+
+  routes.forEach(route => {
+    route.score = calculateSafety(route);
+
+    if (route.score > highestScore) {
+      highestScore = route.score;
+      bestRoute = route;
+    }
+  });
+
+  displayResults(routes, bestRoute);
+}
+
+function displayResults(routes, bestRoute) {
+  const container = document.getElementById("results");
+  container.innerHTML = "<h3>Route Analysis</h3>";
+
+  routes.forEach(route => {
+    const div = document.createElement("div");
+
+    div.className = "route " + (route.id === bestRoute.id ? "safe" : "risk");
+
+    div.innerHTML = `
+      <strong>Route ${route.id}</strong><br>
+      Path: ${route.path}<br>
+      Safety Score: ${route.score}/100<br>
+      Lighting: ${route.lighting}<br>
+      Crime Risk: ${route.crime}<br>
+      Traffic: ${route.traffic}
+    `;
+
+    container.appendChild(div);
+  });
+
+  const best = document.createElement("div");
+  best.innerHTML = `<h3>✅ Recommended Route: ${bestRoute.id}</h3>`;
+  container.appendChild(best);
+}
+</script>
+
+</body>
+</html>
