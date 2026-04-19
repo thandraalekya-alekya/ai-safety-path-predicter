@@ -1,22 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Safety Path Predictor</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
 body {
-  font-family: Arial, sans-serif;
-  margin:0;
+  font-family: Arial;
   background:#f4f6f8;
+  margin:0;
 }
 
 .container {
-  max-width:600px;
-  margin:auto;
+  max-width:500px;
+  margin:50px auto;
   background:white;
   padding:20px;
   border-radius:10px;
@@ -45,17 +41,15 @@ button {
 #result {
   margin-top:15px;
   padding:10px;
-  background:#eef;
   border-radius:6px;
   text-align:center;
+  font-size:18px;
 }
-
-.safe { color:green; }
-.danger { color:red; }
-
-#map {
-  height:60vh;
-  margin-top:15px;
+.safe {
+  color:green;
+}
+.risky {
+  color:red;
 }
 </style>
 </head>
@@ -65,90 +59,38 @@ button {
 <div class="container">
   <h2>AI Safety Path Predictor</h2>
 
-  <input id="start" placeholder="Start (lat,lng)">
-  <input id="end" placeholder="End (lat,lng)">
+  <input id="start" placeholder="Enter Start Location">
+  <input id="end" placeholder="Enter Destination">
 
-  <button onclick="findRoute()">Find Safe Route</button>
+  <button onclick="predict()">Check Safety</button>
 
   <div id="result">Enter locations and click button</div>
 </div>
 
-<div id="map"></div>
-
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <script>
-var map = L.map('map').setView([17.3850, 78.4867], 13);
+function predict(){
+  const start = document.getElementById("start").value;
+  const end = document.getElementById("end").value;
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap'
-}).addTo(map);
-
-let routeLine;
-
-const dangerZones = [
-  { lat:17.385, lng:78.486, risk:8 },
-  { lat:17.395, lng:78.480, risk:6 },
-  { lat:17.400, lng:78.490, risk:7 }
-];
-
-dangerZones.forEach(z => {
-  L.circle([z.lat, z.lng], {
-    color:'red',
-    radius:200
-  }).addTo(map);
-});
-
-function calculateSafety(coords){
-  let risk = 0;
-
-  coords.forEach(p => {
-    dangerZones.forEach(z => {
-      let d = map.distance(p, [z.lat, z.lng]);
-      if(d < 300) risk += z.risk;
-    });
-  });
-
-  return Math.max(0, 100 - risk);
-}
-
-async function findRoute(){
-  try {
-    const s = document.getElementById("start").value.split(",");
-    const e = document.getElementById("end").value.split(",");
-
-    if(s.length < 2 || e.length < 2){
-      alert("Enter coordinates like 17.3850,78.4867");
-      return;
-    }
-
-    const start = [parseFloat(s[0]), parseFloat(s[1])];
-    const end = [parseFloat(e[0]), parseFloat(e[1])];
-
-    if(routeLine) map.removeLayer(routeLine);
-
-    const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-
-    routeLine = L.polyline(coords, {color:'blue'}).addTo(map);
-    map.fitBounds(routeLine.getBounds());
-
-    let score = calculateSafety(coords);
-
-    let msg = score > 70 ? "Safe Route ✅" : "Risky Route ⚠️";
-
-    document.getElementById("result").innerHTML =
-      `<b>Safety Score:</b> ${score}% <br>
-       <b class="${score>70?'safe':'danger'}">${msg}</b>`;
-
-  } catch (error){
-    alert("Something went wrong. Check internet or inputs.");
-    console.log(error);
+  if(start === "" || end === ""){
+    alert("Please enter both locations");
+    return;
   }
+
+  // simple AI logic (demo)
+  let score = Math.floor(Math.random() * 100);
+
+  let resultText = "";
+  if(score > 70){
+    resultText = "Safe Route ✅";
+    document.getElementById("result").className = "safe";
+  } else {
+    resultText = "Risky Route ⚠️";
+    document.getElementById("result").className = "risky";
+  }
+
+  document.getElementById("result").innerHTML =
+    "Safety Score: " + score + "%<br>" + resultText;
 }
 </script>
 
