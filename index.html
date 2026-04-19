@@ -1,100 +1,129 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="en">
 <head>
-  <title>AI Safety Path Predictor</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <style>
-    body { margin:0; font-family: Arial; }
-    #map { height: 90vh; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Safety Path Predictor</title>
 
-    .controls {
-      padding:10px;
-      background:#f4f4f4;
-      display:flex;
-      gap:10px;
-      flex-wrap: wrap;
-    }
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-    input, button {
-      padding:8px;
-      font-size:14px;
-    }
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin:0;
+  background:#f4f6f8;
+}
 
-    button {
-      background:#007BFF;
-      color:white;
-      border:none;
-      cursor:pointer;
-    }
+.container {
+  max-width:600px;
+  margin:auto;
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+}
 
-    #score {
-      font-weight:bold;
-      color:green;
-    }
-  </style>
+h2 {
+  text-align:center;
+}
+
+input, button {
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+
+button {
+  background:#007BFF;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#result {
+  margin-top:15px;
+  padding:10px;
+  background:#eef;
+  border-radius:6px;
+  text-align:center;
+}
+
+.safe { color:green; }
+.danger { color:red; }
+
+#map {
+  height:60vh;
+  margin-top:15px;
+}
+</style>
 </head>
-  <body>
-<div class="controls">
-  <input type="text" id="start" placeholder="Start (lat,lng)">
-  <input type="text" id="end" placeholder="End (lat,lng)">
+
+<body>
+
+<div class="container">
+  <h2>AI Safety Path Predictor</h2>
+
+  <input id="start" placeholder="Start (lat,lng)">
+  <input id="end" placeholder="End (lat,lng)">
+
   <button onclick="findRoute()">Find Safe Route</button>
-  <span id="score"></span>
+
+  <div id="result">Enter locations and click button</div>
 </div>
+
 <div id="map"></div>
-<!-- Leaflet JS -->
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <script>
-  // Initialize map (Hyderabad default)
-  var map = L.map('map').setView([17.3850, 78.4867], 13);
+var map = L.map('map').setView([17.3850, 78.4867], 13);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap'
+}).addTo(map);
+
+let routeLine;
+
+const dangerZones = [
+  { lat:17.385, lng:78.486, risk:8 },
+  { lat:17.395, lng:78.480, risk:6 },
+  { lat:17.400, lng:78.490, risk:7 }
+];
+
+dangerZones.forEach(z => {
+  L.circle([z.lat, z.lng], {
+    color:'red',
+    radius:200
   }).addTo(map);
+});
 
-  var routeLine;
+function calculateSafety(coords){
+  let risk = 0;
 
-  // Dummy danger zones
-  const dangerZones = [
-    { lat:17.385, lng:78.486, risk:8 },
-    { lat:17.395, lng:78.480, risk:6 },
-    { lat:17.400, lng:78.490, risk:7 }
-  ];
-
-  // Show danger zones
-  dangerZones.forEach(zone => {
-    L.circle([zone.lat, zone.lng], {
-      color:'red',
-      radius:200
-    }).addTo(map);
+  coords.forEach(p => {
+    dangerZones.forEach(z => {
+      let d = map.distance(p, [z.lat, z.lng]);
+      if(d < 300) risk += z.risk;
+    });
   });
 
-  // Safety calculation
-  function calculateSafety(routeCoords) {
-    let risk = 0;
+  return Math.max(0, 100 - risk);
+}
 
-    routeCoords.forEach(point => {
-      dangerZones.forEach(zone => {
-        let dist = map.distance(point, [zone.lat, zone.lng]);
-        if (dist < 300) {
-          risk += zone.risk;
-        }
-      });
-    });
+async function findRoute(){
+  try {
+    const s = document.getElementById("start").value.split(",");
+    const e = document.getElementById("end").value.split(",");
 
-    return Math.max(0, 100 - risk);
-  }
+    if(s.length < 2 || e.length < 2){
+      alert("Enter coordinates like 17.3850,78.4867");
+      return;
+    }
 
-  // Find route
-  async function findRoute() {
-    const startInput = document.getElementById("start").value.split(",");
-    const endInput = document.getElementById("end").value.split(",");
-
-    const start = [parseFloat(startInput[0]), parseFloat(startInput[1])];
-    const end = [parseFloat(endInput[0]), parseFloat(endInput[1])];
+    const start = [parseFloat(s[0]), parseFloat(s[1])];
+    const end = [parseFloat(e[0]), parseFloat(e[1])];
 
     if(routeLine) map.removeLayer(routeLine);
 
@@ -105,17 +134,23 @@
 
     const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
 
-    // Draw route
     routeLine = L.polyline(coords, {color:'blue'}).addTo(map);
     map.fitBounds(routeLine.getBounds());
 
-    // Calculate safety score
     let score = calculateSafety(coords);
 
-    document.getElementById("score").innerText = "Safety Score: " + score + "%";
+    let msg = score > 70 ? "Safe Route ✅" : "Risky Route ⚠️";
+
+    document.getElementById("result").innerHTML =
+      `<b>Safety Score:</b> ${score}% <br>
+       <b class="${score>70?'safe':'danger'}">${msg}</b>`;
+
+  } catch (error){
+    alert("Something went wrong. Check internet or inputs.");
+    console.log(error);
   }
+}
 </script>
+
 </body>
 </html>
-:::
-
